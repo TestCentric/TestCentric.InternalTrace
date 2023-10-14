@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+    <metadata>
+        <id>TestCentric.InternalTrace</id>
+        <version>0.0.0</version>
+        <title>TestCentric Internal Trace</title>
+        <authors>Charlie Poole</authors>
+        <license type="expression">MIT</license>
+        <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+        <icon>testcentric.png</icon>
+        <readme>README.md</readme>
+        <projectUrl>https://test-centric.org/</projectUrl>
+        <description>The common InternalTrace logic used by multple TestCentric projects.</description>
+        <copyright>Copyright 2023 (c) Charlie Poole</copyright>
+        <repository url="https://github.com/TestCentric/Testcentric.InternalTrace" />
+    </metadata>
+	<files>
+		<file src="../../README.md" />
+		<file src="../../LICENSE.txt" />
+		<file src="../../testcentric.png" />
+		<file src="net20/TestCentric.InternalTrace.dll" target="lib/net20" />
+		<file src="net462/TestCentric.InternalTrace.dll" target="lib/net462" />
+		<file src="netstandard2.0/TestCentric.InternalTrace.dll" target="lib/netstandard2.0" />
+	</files>
+</package>
