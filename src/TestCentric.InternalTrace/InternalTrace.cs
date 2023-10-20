@@ -20,7 +20,6 @@ namespace TestCentric
     /// used sparingly. Keep the trace Level as low as possible and only
     /// insert InternalTrace writes where they are needed.
     /// TODO: add some buffering and a separate writer thread as an option.
-    /// TODO: figure out a way to turn on trace in specific classes only.
     /// </summary>
     public static class InternalTrace
     {
@@ -30,9 +29,9 @@ namespace TestCentric
         public static bool Initialized { get; private set; }
 
         /// <summary>
-        /// TraceLevel as initially set
+        /// TraceLevel as initially set by user in call to Initialize
         /// </summary>
-        public static InternalTraceLevel TraceLevel { get; private set; }
+        public static InternalTraceLevel DefaultTraceLevel { get; private set; }
 
         /// <summary>
         /// The TraceWriter used for logging
@@ -49,13 +48,14 @@ namespace TestCentric
         {
             if (!Initialized)
             {
-                TraceLevel = level;
+                DefaultTraceLevel = level;
 
-                if (TraceWriter == null && TraceLevel > InternalTraceLevel.Off)
-                {
-                    TraceWriter = new InternalTraceWriter(logName);
-                    TraceWriter.WriteLine("InternalTrace: Initializing at level {0}", TraceLevel);
-                }
+                // We create the trace writer even if tracing is off, because
+                // individual loggers are able to override the default level.
+                TraceWriter = new InternalTraceWriter(logName);
+
+                if (DefaultTraceLevel > InternalTraceLevel.Off)
+                    TraceWriter.WriteLine("InternalTrace: Initializing at level {0}", DefaultTraceLevel);
 
                 Initialized = true;
             }
@@ -64,26 +64,42 @@ namespace TestCentric
         }
 
         /// <summary>
-        /// Get a named Logger
+        /// Get a named Logger using the default TraceLevel
         /// </summary>
         /// <returns></returns>
         public static Logger GetLogger(string name)
         {
-            return new Logger(name, TraceLevel, TraceWriter);
+            return new Logger(name, DefaultTraceLevel, TraceWriter);
         }
 
         /// <summary>
-        /// Get a logger named for a particular Type.
+        /// Get a logger named for a particular Type using the default TraceLevel
         /// </summary>
         public static Logger GetLogger(Type type)
         {
             return GetLogger(type.FullName);
         }
 
+        /// <summary>
+        /// Get a named Logger specifying the TraceLevel
+        /// </summary>
+        public static Logger GetLogger(string name, InternalTraceLevel level)
+        {
+            return new Logger(name, level, TraceWriter);
+        }
+
+        /// <summary>
+        /// Get a logger named for a particular Type, specifying the TraceLevel.
+        /// </summary>
+        public static Logger GetLogger(Type type, InternalTraceLevel level)
+        {
+            return GetLogger(type.FullName, level);
+        }
+
         public static Logger GetConsoleLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default)
         {
             if (level == InternalTraceLevel.Default)
-                level = TraceLevel;
+                level = DefaultTraceLevel;
 
             return new Logger(name, level, new InternalTraceWriter(System.Console.Out));
         }
