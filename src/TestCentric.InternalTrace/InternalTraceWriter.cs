@@ -13,8 +13,24 @@ namespace TestCentric
     /// </summary>
     internal class InternalTraceWriter : TextWriter
     {
-        TextWriter writer;
-        object myLock = new object();
+        TextWriter _writer;
+        string _logPath;
+        object _myLock = new object();
+
+        private TextWriter Writer
+        {
+            get
+            {
+                // We delay creation of the writer so that we can avoid creation of empty log files
+                if (_writer == null)
+                {
+                    var streamWriter = new StreamWriter(new FileStream(_logPath, FileMode.Append, FileAccess.Write, FileShare.Write));
+                    streamWriter.AutoFlush = true;
+                    _writer = streamWriter;
+                }
+                return _writer;
+            }
+        }
 
         /// <summary>
         /// Construct an InternalTraceWriter that writes to a file.
@@ -22,9 +38,7 @@ namespace TestCentric
         /// <param name="logPath">Path to the file to use</param>
         public InternalTraceWriter(string logPath)
         {
-            var streamWriter = new StreamWriter(new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.Write));
-            streamWriter.AutoFlush = true;
-            this.writer = streamWriter;
+            _logPath = logPath;
         }
 
         /// <summary>
@@ -34,7 +48,7 @@ namespace TestCentric
         /// <param name="writer"></param>
         public InternalTraceWriter(TextWriter writer)
         {
-            this.writer = writer;
+            _writer = writer;
         }
 
         /// <summary>
@@ -43,7 +57,7 @@ namespace TestCentric
         /// <returns>The character encoding in which the output is written.</returns>
         public override System.Text.Encoding Encoding
         {
-            get { return writer.Encoding; }
+            get { return _writer.Encoding; }
         }
 
         /// <summary>
@@ -52,9 +66,9 @@ namespace TestCentric
         /// <param name="value">The character to write to the text stream.</param>
         public override void Write(char value)
         {
-            lock (myLock)
+            lock (_myLock)
             {
-                writer.Write(value);
+                _writer.Write(value);
             }
         }
 
@@ -64,7 +78,7 @@ namespace TestCentric
         /// <param name="value">The string to write.</param>
         public override void Write(string value)
         {
-            lock (myLock)
+            lock (_myLock)
             {
                 base.Write(value);
             }
@@ -76,9 +90,9 @@ namespace TestCentric
         /// <param name="value">The string to write. If <paramref name="value" /> is null, only the line terminator is written.</param>
         public override void WriteLine(string value)
         {
-            lock (myLock)
+            lock (_myLock)
             {
-                writer.WriteLine(value);
+                _writer.WriteLine(value);
             }
         }
 
@@ -88,13 +102,13 @@ namespace TestCentric
         /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            lock (myLock)
+            lock (_myLock)
             {
-                if (disposing && writer != null)
+                if (disposing && _writer != null)
                 {
-                    writer.Flush();
-                    writer.Dispose();
-                    writer = null;
+                    _writer.Flush();
+                    _writer.Dispose();
+                    _writer = null;
                 }
             }
 
@@ -106,8 +120,8 @@ namespace TestCentric
         /// </summary>
         public override void Flush()
         {
-            if ( writer != null )
-                writer.Flush();
+            if ( _writer != null )
+                _writer.Flush();
         }
     }
 }
