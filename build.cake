@@ -39,8 +39,13 @@ BuildSettings.Packages.Add(new NuGetPackage(
 //////////////////////////////////////////////////////////////////////
 
 Task("AppVeyor")
-	.IsDependentOn("BuildTestAndPackage")
-	.IsDependentOn("PublishToMyGet")
+	.Description("Targets to run on AppVeyor")
+	.IsDependentOn("DumpSettings")
+	.IsDependentOn("Build")
+	.IsDependentOn("Test")
+	.IsDependentOn("Package")
+	.IsDependentOn("Publish")
+	.IsDependentOn("CreateDraftRelease")
 	.IsDependentOn("CreateProductionRelease");
 
 Task("Default")
