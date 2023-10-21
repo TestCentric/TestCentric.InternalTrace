@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		build.cmd = build.cmd
 		build.ps1 = build.ps1
 		build.sh = build.sh
+		GitReleaseManager.yaml = GitReleaseManager.yaml
 		GitVersion.yml = GitVersion.yml
 		LICENSE.txt = LICENSE.txt
 		NuGet.config = NuGet.config
@@ -22,7 +23,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nuget", "nuget", "{3728B82C
 		nuget\TestCentric.InternalTrace.nuspec = nuget\TestCentric.InternalTrace.nuspec
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCentric.InternalTrace.Tests", "src\TestCentric.InternalTrace.Tests\TestCentric.InternalTrace.Tests.csproj", "{42F113CC-A37B-4AF3-AC7B-4AD18D231E45}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCentric.InternalTrace.Tests", "src\TestCentric.InternalTrace.Tests\TestCentric.InternalTrace.Tests.csproj", "{42F113CC-A37B-4AF3-AC7B-4AD18D231E45}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCentric.InternalTrace", "src\TestCentric.InternalTrace\TestCentric.InternalTrace.csproj", "{CCDDDBFF-E8C8-45B6-9261-BF59564AD638}"
 EndProject
