@@ -11,7 +11,7 @@ namespace TestCentric
     /// A trace listener that writes to a separate file per domain
     /// and process using it.
     /// </summary>
-    internal class InternalTraceWriter : TextWriter
+    public class InternalTraceWriter : TextWriter
     {
         TextWriter _writer;
         string _logPath;
@@ -57,7 +57,7 @@ namespace TestCentric
         /// <returns>The character encoding in which the output is written.</returns>
         public override System.Text.Encoding Encoding
         {
-            get { return _writer.Encoding; }
+            get { return Writer.Encoding; }
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace TestCentric
         {
             lock (_myLock)
             {
-                _writer.Write(value);
+                Writer.Write(value);
             }
         }
 
@@ -80,7 +80,7 @@ namespace TestCentric
         {
             lock (_myLock)
             {
-                base.Write(value);
+                Writer.Write(value);
             }
         }
 
@@ -92,7 +92,7 @@ namespace TestCentric
         {
             lock (_myLock)
             {
-                _writer.WriteLine(value);
+                Writer.WriteLine(value);
             }
         }
 
@@ -106,8 +106,8 @@ namespace TestCentric
             {
                 if (disposing && _writer != null)
                 {
-                    _writer.Flush();
-                    _writer.Dispose();
+                    Writer.Flush();
+                    Writer.Dispose();
                     _writer = null;
                 }
             }

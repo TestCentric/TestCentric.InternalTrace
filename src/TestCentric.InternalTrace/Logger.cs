@@ -17,23 +17,27 @@ namespace TestCentric
         private const string TraceFmt = "{0} {1,-5} [{2,2}] {3}: {4}";
 
         private readonly string _name;
-        private readonly TextWriter _writer;
+        private bool _echo;
 
         public InternalTraceLevel TraceLevel { get; }
+        public InternalTraceWriter TraceWriter { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Logger"/> class.
         /// </summary>
         /// <param name="fullName">The name.</param>
         /// <param name="level">The log level.</param>
-        /// <param name="writer">The writer where logs are sent.</param>
-        public Logger(string fullName, InternalTraceLevel level, TextWriter writer)
+        /// <param name="traceWriter">The writer where logs are sent.</param>
+        /// <param name="echo">If true, echo all output to System.Console.</param>
+        public Logger(string fullName, InternalTraceLevel level, InternalTraceWriter traceWriter, bool echo = false)
         {
             TraceLevel = level;
-            _writer = writer;
+            TraceWriter = traceWriter;
 
             var index = fullName.LastIndexOf('.');
             _name = index >= 0 ? fullName.Substring(index + 1) : fullName;
+
+            _echo = echo;
         }
 
         /// <summary>
@@ -114,27 +118,38 @@ namespace TestCentric
 
         private void Log(InternalTraceLevel level, string message)
         {
-            if (_writer != null && TraceLevel >= level)
+            if (TraceWriter != null && TraceLevel >= level)
                 WriteLog(level, message);
         }
 
         private void Log(InternalTraceLevel level, string format, params object[] args)
         {
-            if (TraceLevel >= level)
-                WriteLog(level, string.Format(format, args));
+            string message = string.Format(format, args);
+            Log(level, message);
         }
 
         private void WriteLog(InternalTraceLevel level, string message)
         {
-            _writer.WriteLine(TraceFmt,
+#if NET20 || NET30 || NET35 || NET40
+            int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+#else
+            int threadId = Environment.CurrentManagedThreadId;
+#endif
+
+            TraceWriter.WriteLine(TraceFmt,
                 DateTime.Now.ToString(TimeFmt),
                 level,
-#if NET20 || NET30 || NET35 || NET40
-                System.Threading.Thread.CurrentThread.ManagedThreadId,
-#else
-                Environment.CurrentManagedThreadId,
-#endif
-                _name, message);
+                threadId,
+                _name,
+                message);
+
+            if (_echo)
+                Console.WriteLine(TraceFmt,
+                    DateTime.Now.ToString(TimeFmt),
+                    level,
+                    threadId,
+                    _name,
+                    message);
         }
     }
 }
