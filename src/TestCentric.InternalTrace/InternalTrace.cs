@@ -36,7 +36,7 @@ namespace TestCentric
         /// <summary>
         /// The TraceWriter used for logging
         /// </summary>
-        private static InternalTraceWriter TraceWriter { get; set; }
+        public static InternalTraceWriter TraceWriter { get; private set; }
 
         /// <summary>
         /// Initialize the internal trace facility using the name of the log
@@ -64,49 +64,30 @@ namespace TestCentric
         }
 
         /// <summary>
-        /// Get a named Logger using the default TraceLevel
+        /// Get a Logger specifying the logger name.
         /// </summary>
-        /// <returns></returns>
-        public static Logger GetLogger(string name)
-        {
-            return new Logger(name, DefaultTraceLevel, TraceWriter);
-        }
-
-        /// <summary>
-        /// Get a logger named for a particular Type using the default TraceLevel
-        /// </summary>
-        public static Logger GetLogger(Type type)
-        {
-            return GetLogger(type.FullName);
-        }
-
-        /// <summary>
-        /// Get a named Logger specifying the TraceLevel
-        /// </summary>
-        public static Logger GetLogger(string name, InternalTraceLevel level)
-        {
-            return new Logger(name, level, TraceWriter);
-        }
-
-        /// <summary>
-        /// Get a logger named for a particular Type, specifying the TraceLevel.
-        /// </summary>
-        public static Logger GetLogger(Type type, InternalTraceLevel level)
-        {
-            return GetLogger(type.FullName, level);
-        }
-
-        public static Logger GetConsoleLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default)
+        /// <returns>A logger</returns>
+        /// <param name="name">Name to use for the logger</param>
+        /// <param name="level">Optional trace level for this logger</param>
+        /// <param name="echo">If true, logger output is echoed to the console</param>
+        public static Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
         {
             if (level == InternalTraceLevel.Default)
                 level = DefaultTraceLevel;
 
-            return new Logger(name, level, new InternalTraceWriter(System.Console.Out));
+            return new Logger(name, level, TraceWriter, echo);
         }
 
-        public static Logger GetConsoleLogger(Type type, InternalTraceLevel level = InternalTraceLevel.Default)
+        /// <summary>
+        /// Get a logger named for a particular Type.
+        /// </summary>
+        /// <returns>A logger</returns>
+        /// <param name="type">Type whose name is used for for the logger</param>
+        /// <param name="level">Optional trace level for this logger</param>
+        /// <param name="echo">If true, logger output is echoed to the console</param>
+        public static Logger GetLogger(Type type, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
         {
-            return GetConsoleLogger(type.FullName, level);
+            return GetLogger(type.FullName, level, echo);
         }
     }
 }
