@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net35;net462;netcoreapp2.1</TargetFrameworks>
+		<TargetFrameworks>net35;net462;net8.0</TargetFrameworks>
 		<RootNamespace>TestCentric</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<SignAssembly>true</SignAssembly>
