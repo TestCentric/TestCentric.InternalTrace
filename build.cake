@@ -1,18 +1,7 @@
-#tool NuGet.CommandLine&version=6.0.0
-
 // Load the recipe
-#load nuget:?package=TestCentric.Cake.Recipe&version=1.1.0-dev00050
+#load nuget:?package=TestCentric.Cake.Recipe&version=1.1.0-dev00066
 // Comment out above line and uncomment below for local tests of recipe changes
 //#load ../TestCentric.Cake.Recipe/recipe/*.cake
-
-var NUGET_ID = "TestCentric.InternalT race";
-
-string Configuration = Argument("configuration", Argument("c", "Release"));
-
-string PackageVersion;
-string PackageName;
-bool IsProductionRelease;
-bool IsDevelopmentRelease;
 
 //////////////////////////////////////////////////////////////////////
 // INITIALIZE BUILD SETTINGS
@@ -32,7 +21,12 @@ BuildSettings.Packages.Add(new NuGetPackage(
 			"LICENSE.txt", "README.md", "testcentric.png",
 			"lib/net20/TestCentric.InternalTrace.dll",
 			"lib/net462/TestCentric.InternalTrace.dll",
-			"lib/netstandard2.0/TestCentric.InternalTrace.dll") }));
+			"lib/netstandard2.0/TestCentric.InternalTrace.dll") },
+	symbols: new PackageCheck[] {
+		HasFiles(
+			"lib/net20/TestCentric.InternalTrace.pdb",
+			"lib/net462/TestCentric.InternalTrace.pdb",
+			"lib/netstandard2.0/TestCentric.InternalTrace.pdb") }));
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
@@ -55,4 +49,4 @@ Task("Default")
 // EXECUTION
 //////////////////////////////////////////////////////////////////////
 
-RunTarget(Argument("target", Argument("t", "Default")));
+RunTarget(CommandLineOptions.Target);
