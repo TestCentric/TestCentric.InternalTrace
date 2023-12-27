@@ -13,8 +13,10 @@ namespace TestCentric
     /// </summary>
     public class Logger
     {
-        private const string TimeFmt = "HH:mm:ss.fff";
-        private const string TraceFmt = "{0} {1,-5} [{2,2}] {3}: {4}";
+        private const string INVALID_OPERATION_MSG = "Cannot use Logger before InternalTrace is initialized.";
+
+        private const string TIME_FORMAT = "HH:mm:ss.fff";
+        private const string TRACE_FORMAT = "{0} {1,-5} [{2,2}] {3}: {4}";
 
         private readonly string _name;
         private bool _echo;
@@ -118,6 +120,9 @@ namespace TestCentric
 
         private void Log(InternalTraceLevel level, string message)
         {
+            if (!InternalTrace.Initialized)
+                throw new InvalidOperationException(INVALID_OPERATION_MSG + $"\r\nMessage: {message}" );
+
             if (TraceWriter != null && TraceLevel >= level)
                 WriteLog(level, message);
         }
@@ -135,21 +140,17 @@ namespace TestCentric
 #else
             int threadId = Environment.CurrentManagedThreadId;
 #endif
-
-            TraceWriter.WriteLine(TraceFmt,
-                DateTime.Now.ToString(TimeFmt),
+            string formattedMessage = string.Format(TRACE_FORMAT,
+                DateTime.Now.ToString(TIME_FORMAT),
                 level,
                 threadId,
                 _name,
                 message);
 
+            TraceWriter.WriteLine(formattedMessage);
+
             if (_echo)
-                Console.WriteLine(TraceFmt,
-                    DateTime.Now.ToString(TimeFmt),
-                    level,
-                    threadId,
-                    _name,
-                    message);
+                Console.WriteLine(formattedMessage);
         }
     }
 }
