@@ -7,6 +7,7 @@ using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
 
 namespace TestCentric
@@ -16,18 +17,42 @@ namespace TestCentric
         static readonly InternalTraceLevel[] LEVELS = new [] { InternalTraceLevel.Error, InternalTraceLevel.Warning, InternalTraceLevel.Info, InternalTraceLevel.Debug };
         static readonly string LogFileName = "MyLogFile" + Process.GetCurrentProcess().Id;
 
-        [OneTimeSetUp]
-        public void InitializeInternalTrace()
-        {
-            InternalTrace.Initialize(LogFileName, InternalTraceLevel.Debug);
-        }
-
         [OneTimeTearDown]
         public void Cleanup() 
         {
             InternalTrace.TraceWriter.Close();
             if (File.Exists(LogFileName))
                 File.Delete(LogFileName);
+        }
+
+        // NOTE: Because InternalTrace is a static class, it may only be initialized once.
+        // We use test ordering to first verify that it's uninitialized and that logging
+        // before initialization throws an exception before we finally initialize it.
+        // After initializing, the remaining tests may run in any order.
+
+        [Test, Order(1)]
+        public void InternalTraceIsNotInitializedInitially()
+        {
+            Assert.That(InternalTrace.Initialized, Is.False);
+        }
+
+        [Test, Order(2)]
+        public void LogggingBeforeInitializationThrowsException()
+        {
+            var logger = InternalTrace.GetLogger("MyLogger");
+
+            const string MSG = "This should  throw";
+            Assert.That(() => { logger.Info(MSG); },
+                Throws.InvalidOperationException.With.Message.Contains(MSG));
+        }
+
+        [Test, Order(3)]
+        public void CanInitializeInternalTrace()
+        {
+            InternalTrace.Initialize(LogFileName, InternalTraceLevel.Debug);
+
+            Assert.True(InternalTrace.Initialized);
+            Assert.That(InternalTrace.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Debug));           
         }
 
         [Test, Combinatorial]
