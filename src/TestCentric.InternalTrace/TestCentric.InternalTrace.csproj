@@ -11,6 +11,20 @@
 		<NoWarn>618</NoWarn>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<PackageId>TestCentric.InternalTrace</PackageId>
+		<Title>TestCentric Internal Trace</Title>
+		<Description>The common InternalTrace logic used by multple TestCentric projects.</Description>
+		<Authors>Charlie Poole</Authors>
+		<Copyright>Copyright 2023 (c) Charlie Poole</Copyright>
+		<PackageProjectUrl>https://test-centric.org</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/TestCentric/Testcentric.InternalTrace</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>testcentric.png</PackageIcon>
+		<PackageOutputPath>..\..\packaging</PackageOutputPath>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" Link="LICENSE.txt" />
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" Link="README.md" />

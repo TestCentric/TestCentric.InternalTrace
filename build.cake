@@ -26,7 +26,7 @@ BuildSettings.Initialize(
 
 BuildSettings.Packages.Add(new NuGetPackage(
 	id: "TestCentric.InternalTrace",
-	source: "nuget/TestCentric.InternalTrace.nuspec",
+	source: "src/TestCentric.InternalTrace/TestCentric.InternalTrace.csproj",
 	checks: new PackageCheck[] {
 		HasFiles(
 			"LICENSE.txt", "README.md", "testcentric.png",
