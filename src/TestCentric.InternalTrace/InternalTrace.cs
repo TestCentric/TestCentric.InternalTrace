@@ -4,6 +4,7 @@
 // ***********************************************************************
 
 using System;
+using System.Diagnostics;
 
 namespace TestCentric
 {
@@ -24,19 +25,19 @@ namespace TestCentric
     public static class InternalTrace
     {
         /// <summary>
-        /// Gets a flag indicating whether the InternalTrace is initialized
+        /// Gets a flag indicating whether Initialize has been called
         /// </summary>
-        public static bool Initialized { get; private set; }
+        public static bool Initialized => TraceWriter.Initialized;
 
         /// <summary>
         /// TraceLevel as initially set by user in call to Initialize
         /// </summary>
-        public static InternalTraceLevel DefaultTraceLevel { get; private set; }
+        public static InternalTraceLevel DefaultTraceLevel => TraceWriter.DefaultTraceLevel;
 
         /// <summary>
         /// The TraceWriter used for logging
         /// </summary>
-        public static InternalTraceWriter TraceWriter { get; private set; }
+        public static InternalTraceWriter TraceWriter { get; } = new InternalTraceWriter($"InternalTrace_{Process.GetCurrentProcess().Id}");
 
         /// <summary>
         /// Initialize the internal trace facility using the name of the log
@@ -45,23 +46,7 @@ namespace TestCentric
         /// <param name="logName">The log name</param>
         /// <param name="level">The trace level</param>
         public static void Initialize(string logName, InternalTraceLevel level)
-        {
-            if (!Initialized)
-            {
-                DefaultTraceLevel = level;
-
-                // We create the trace writer even if tracing is off, because
-                // individual loggers are able to override the default level.
-                TraceWriter = new InternalTraceWriter(logName);
-
-                if (DefaultTraceLevel > InternalTraceLevel.Off)
-                    TraceWriter.WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
-
-                Initialized = true;
-            }
-            else
-                TraceWriter.WriteLine($"InternalTrace: Ignoring attempted re-initialization at level {level}");
-        }
+            => TraceWriter.Initialize(logName, level);
 
         /// <summary>
         /// Get a Logger specifying the logger name.

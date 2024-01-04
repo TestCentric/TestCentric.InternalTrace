@@ -1,0 +1,2 @@
+InternalTrace: Initializing at level Debug
+09:25:05.801 Info  [ 5] MyLogger: This should display on the console
