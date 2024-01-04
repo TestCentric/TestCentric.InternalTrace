@@ -55,12 +55,12 @@ namespace TestCentric
                 TraceWriter = new InternalTraceWriter(logName);
 
                 if (DefaultTraceLevel > InternalTraceLevel.Off)
-                    TraceWriter.WriteLine("InternalTrace: Initializing at level {0}", DefaultTraceLevel);
+                    TraceWriter.WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
 
                 Initialized = true;
             }
             else
-                TraceWriter.WriteLine("InternalTrace: Ignoring attempted re-initialization at level {0}", level);
+                TraceWriter.WriteLine($"InternalTrace: Ignoring attempted re-initialization at level {level}");
         }
 
         /// <summary>

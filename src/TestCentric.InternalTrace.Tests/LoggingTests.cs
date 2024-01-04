@@ -116,7 +116,6 @@ namespace TestCentric
             var logger = InternalTrace.GetLogger("MyLogger", InternalTraceLevel.Info, echo: true);
             Assert.NotNull(logger.TraceWriter);
             logger.Info("This should display on the console");
-            logger.TraceWriter.Flush();
         }
     }
 }
