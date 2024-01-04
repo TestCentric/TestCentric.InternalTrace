@@ -62,6 +62,21 @@ namespace TestCentric
         }
 
         /// <summary>
+        /// Get a Logger specifying the logger name and optionally the  trace level and echo flag
+        /// </summary>
+        /// <returns>A logger</returns>
+        /// <param name="name">Name to use for the logger</param>
+        /// <param name="level">Optional trace level for this logger</param>
+        /// <param name="echo">If true, logger output is echoed to the console</param>
+        public Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
+        {
+            if (level == InternalTraceLevel.Default)
+                level = DefaultTraceLevel;
+
+            return new Logger(name, level, this, echo);
+        }
+
+        /// <summary>
         /// Writes a string followed by a line terminator to the text string or stream.
         /// </summary>
         /// <param name="value">The string to write. If <paramref name="value" /> is null, only the line terminator is written.</param>

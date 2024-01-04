@@ -9,21 +9,29 @@ using System.Diagnostics;
 namespace TestCentric
 {
     /// <summary>
-    /// InternalTrace provides facilities for tracing the execution
-    /// of the NUnit framework. Tests and classes under test may make use 
+    /// This static class serves as a convenient facade for the TestCentric
+    /// InternalTrace facility, which provides for tracing the internal
+    /// operation of TestCentric. Tests and classes under test may make use 
     /// of Console writes, System.Diagnostics.Trace or various loggers and
-    /// NUnit itself traps and processes each of them. For that reason, a
-    /// separate internal trace is needed.
-    /// 
-    /// Note:
+    /// TestCentric itself traps and processes each of them. For that reason,
+    /// a separate internal trace is needed.
+    /// </summary>
+    /// <remarks>
     /// InternalTrace uses a global lock to allow multiple threads to write
     /// trace messages. This can easily make it a bottleneck so it must be 
     /// used sparingly. Keep the trace Level as low as possible and only
     /// insert InternalTrace writes where they are needed.
     /// TODO: add some buffering and a separate writer thread as an option.
-    /// </summary>
+    /// </remarks>
     public static class InternalTrace
     {
+        /// <summary>
+        /// The TraceWriter used for logging is created here as a singleton. All
+        /// other operations are delegated to the TraceWriter.
+        /// </summary>
+        public static InternalTraceWriter TraceWriter { get; }
+            = new InternalTraceWriter($"InternalTrace_{Process.GetCurrentProcess().Id}");
+
         /// <summary>
         /// Gets a flag indicating whether Initialize has been called
         /// </summary>
@@ -35,11 +43,6 @@ namespace TestCentric
         public static InternalTraceLevel DefaultTraceLevel => TraceWriter.DefaultTraceLevel;
 
         /// <summary>
-        /// The TraceWriter used for logging
-        /// </summary>
-        public static InternalTraceWriter TraceWriter { get; } = new InternalTraceWriter($"InternalTrace_{Process.GetCurrentProcess().Id}");
-
-        /// <summary>
         /// Initialize the internal trace facility using the name of the log
         /// to be written to and the trace level.
         /// </summary>
@@ -49,19 +52,14 @@ namespace TestCentric
             => TraceWriter.Initialize(logName, level);
 
         /// <summary>
-        /// Get a Logger specifying the logger name.
+        /// Get a Logger specifying the logger name and optionally the  trace level and echo flag
         /// </summary>
         /// <returns>A logger</returns>
         /// <param name="name">Name to use for the logger</param>
         /// <param name="level">Optional trace level for this logger</param>
         /// <param name="echo">If true, logger output is echoed to the console</param>
         public static Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
-        {
-            if (level == InternalTraceLevel.Default)
-                level = DefaultTraceLevel;
-
-            return new Logger(name, level, TraceWriter, echo);
-        }
+            => TraceWriter.GetLogger(name, level, echo);
 
         /// <summary>
         /// Get a logger named for a particular Type.
@@ -71,8 +69,6 @@ namespace TestCentric
         /// <param name="level">Optional trace level for this logger</param>
         /// <param name="echo">If true, logger output is echoed to the console</param>
         public static Logger GetLogger(Type type, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
-        {
-            return GetLogger(type.FullName, level, echo);
-        }
+            => TraceWriter.GetLogger(type.FullName, level, echo);
     }
 }
