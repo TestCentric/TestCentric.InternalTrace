@@ -18,10 +18,10 @@ namespace TestCentric
         private const string TIME_FORMAT = "HH:mm:ss.fff";
         private const string TRACE_FORMAT = "{0} {1,-5} [{2,2}] {3}: {4}";
 
-        private readonly string _name;
-        private bool _echo;
+        public  string Name { get; }
+        public bool EchoToConsole { get; }
 
-        public InternalTraceLevel TraceLevel { get; }
+        public InternalTraceLevel TraceLevel { get; private set; }
         public InternalTraceWriter TraceWriter { get; }
 
         /// <summary>
@@ -37,9 +37,9 @@ namespace TestCentric
             TraceWriter = traceWriter;
 
             var index = fullName.LastIndexOf('.');
-            _name = index >= 0 ? fullName.Substring(index + 1) : fullName;
+            Name = index >= 0 ? fullName.Substring(index + 1) : fullName;
 
-            _echo = echo;
+            EchoToConsole = echo;
         }
 
         /// <summary>
@@ -120,11 +120,16 @@ namespace TestCentric
 
         private void Log(InternalTraceLevel level, string message)
         {
-            if (!InternalTrace.Initialized)
-                throw new InvalidOperationException(INVALID_OPERATION_MSG + $"\r\nMessage: {message}" );
-
-            if (TraceWriter != null && TraceLevel >= level)
+            if (!TraceWriter.Initialized)
                 WriteLog(level, message);
+            else
+            {
+                if (TraceLevel == InternalTraceLevel.Default)
+                    TraceLevel = TraceWriter.DefaultTraceLevel;
+
+                if (TraceLevel >= level)
+                    WriteLog(level, message);
+            }
         }
 
         private void Log(InternalTraceLevel level, string format, params object[] args)
@@ -144,12 +149,12 @@ namespace TestCentric
                 DateTime.Now.ToString(TIME_FORMAT),
                 level,
                 threadId,
-                _name,
+                Name,
                 message);
 
             TraceWriter.WriteLine(formattedMessage);
 
-            if (_echo)
+            if (EchoToConsole)
                 Console.WriteLine(formattedMessage);
         }
     }

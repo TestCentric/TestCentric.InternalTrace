@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
+using System.Diagnostics;
 using System.IO;
 
 namespace TestCentric
@@ -11,26 +12,22 @@ namespace TestCentric
     /// A trace listener that writes to a separate file per domain
     /// and process using it.
     /// </summary>
-    public class InternalTraceWriter : TextWriter
+    public class InternalTraceWriter
     {
         TextWriter _writer;
-        string _logPath;
         object _myLock = new object();
 
-        private TextWriter Writer
-        {
-            get
-            {
-                // We delay creation of the writer so that we can avoid creation of empty log files
-                if (_writer == null)
-                {
-                    var streamWriter = new StreamWriter(new FileStream(_logPath, FileMode.Append, FileAccess.Write, FileShare.Write));
-                    streamWriter.AutoFlush = true;
-                    _writer = streamWriter;
-                }
-                return _writer;
-            }
-        }
+        /// <summary>
+        /// Gets a flag indicating whether the InternalTraceWriter is initialized
+        /// </summary>
+        public bool Initialized { get; set; } = false;
+
+        public string LogPath { get; private set; }
+
+        /// <summary>
+        /// TraceLevel as initially set by user in call to Initialize
+        /// </summary>
+        public InternalTraceLevel DefaultTraceLevel { get; private set; }
 
         /// <summary>
         /// Construct an InternalTraceWriter that writes to a file.
@@ -38,7 +35,7 @@ namespace TestCentric
         /// <param name="logPath">Path to the file to use</param>
         public InternalTraceWriter(string logPath)
         {
-            _logPath = logPath;
+            LogPath = logPath;
         }
 
         /// <summary>
@@ -52,76 +49,98 @@ namespace TestCentric
         }
 
         /// <summary>
-        /// Returns the character encoding in which the output is written.
+        /// Initialize the trace specifying only the trace level.
         /// </summary>
-        /// <returns>The character encoding in which the output is written.</returns>
-        public override System.Text.Encoding Encoding
+        /// <param name="level">The trace level</param>
+        public void Initialize(InternalTraceLevel level)
         {
-            get { return Writer.Encoding; }
+            var pid = Process.GetCurrentProcess().Id;
+            var logName = $"InternalTrace_{pid}";
+            Initialize(logName, level);
         }
 
         /// <summary>
-        /// Writes a character to the text string or stream.
+        /// Initialize the trace writer specifying the path to the
+        /// log and the trace level.
         /// </summary>
-        /// <param name="value">The character to write to the text stream.</param>
-        public override void Write(char value)
+        /// <param name="logName">Path to the log file</param>
+        /// <param name="level">The trace level</param>
+        public void Initialize(string logName, InternalTraceLevel level)
         {
-            lock (_myLock)
+            bool logFileChanging = _linesWritten > 0 && logName != LogPath;
+            if (logFileChanging)
             {
-                Writer.Write(value);
+                WriteLine($"Log continues in file {logName}");
+                Close();
+                _linesWritten = 0;
             }
+
+            var oldPath = LogPath;
+            LogPath = logName;
+            DefaultTraceLevel = level;
+
+            if (DefaultTraceLevel > InternalTraceLevel.Off)
+            {
+                if (logFileChanging)
+                    WriteLine($"Log continued from {oldPath}");
+                WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
+            }
+            
+            Initialized = true;
         }
 
         /// <summary>
-        /// Writes a string to the text string or stream.
+        /// Get a Logger specifying the logger name and optionally the  trace level and echo flag
         /// </summary>
-        /// <param name="value">The string to write.</param>
-        public override void Write(string value)
+        /// <returns>A logger</returns>
+        /// <param name="name">Name to use for the logger</param>
+        /// <param name="level">Optional trace level for this logger</param>
+        /// <param name="echo">If true, logger output is echoed to the console</param>
+        public Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
         {
-            lock (_myLock)
-            {
-                Writer.Write(value);
-            }
+            if (level == InternalTraceLevel.Default)
+                level = DefaultTraceLevel;
+
+            return new Logger(name, level, this, echo);
         }
+
+        private int _linesWritten = 0;
 
         /// <summary>
         /// Writes a string followed by a line terminator to the text string or stream.
         /// </summary>
         /// <param name="value">The string to write. If <paramref name="value" /> is null, only the line terminator is written.</param>
-        public override void WriteLine(string value)
+        public void WriteLine(string value)
         {
             lock (_myLock)
             {
-                Writer.WriteLine(value);
+                // We delay creation of the writer so that we can avoid creation of empty log files
+                if (_writer == null)
+                {
+                    var streamWriter = new StreamWriter(new FileStream(LogPath, FileMode.Create, FileAccess.Write, FileShare.Write));
+                    streamWriter.AutoFlush = true;
+                    _writer = streamWriter;
+                }
+
+                _writer.WriteLine(value);
+                _linesWritten++;
             }
         }
 
         /// <summary>
         /// Releases the unmanaged resources used by the <see cref="T:System.IO.TextWriter" /> and optionally releases the managed resources.
         /// </summary>
-        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
-        protected override void Dispose(bool disposing)
+        public void Close()
         {
             lock (_myLock)
             {
-                if (disposing && _writer != null)
+                if (_writer != null)
                 {
-                    Writer.Flush();
-                    Writer.Dispose();
+                    _writer.Flush();
+                    _writer.Dispose();
                     _writer = null;
                 }
             }
-
-            base.Dispose(disposing);
-        }
-
-        /// <summary>
-        /// Clears all buffers for the current writer and causes any buffered data to be written to the underlying device.
-        /// </summary>
-        public override void Flush()
-        {
-            if ( _writer != null )
-                _writer.Flush();
         }
     }
 }
