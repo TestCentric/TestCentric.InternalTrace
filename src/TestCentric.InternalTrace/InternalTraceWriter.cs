@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
+using System.Diagnostics;
 using System.IO;
 
 namespace TestCentric
@@ -14,13 +15,14 @@ namespace TestCentric
     public class InternalTraceWriter
     {
         TextWriter _writer;
-        string _logPath;
         object _myLock = new object();
 
         /// <summary>
         /// Gets a flag indicating whether the InternalTraceWriter is initialized
         /// </summary>
-        public bool Initialized { get; private set; }
+        public bool Initialized { get; set; } = false;
+
+        public string LogPath { get; private set; }
 
         /// <summary>
         /// TraceLevel as initially set by user in call to Initialize
@@ -33,7 +35,7 @@ namespace TestCentric
         /// <param name="logPath">Path to the file to use</param>
         public InternalTraceWriter(string logPath)
         {
-            _logPath = logPath;
+            LogPath = logPath;
         }
 
         /// <summary>
@@ -46,19 +48,45 @@ namespace TestCentric
             _writer = writer;
         }
 
+        /// <summary>
+        /// Initialize the trace specifying only the trace level.
+        /// </summary>
+        /// <param name="level">The trace level</param>
+        public void Initialize(InternalTraceLevel level)
+        {
+            var pid = Process.GetCurrentProcess().Id;
+            var logName = $"InternalTrace_{pid}";
+            Initialize(logName, level);
+        }
+
+        /// <summary>
+        /// Initialize the trace writer specifying the path to the
+        /// log and the trace level.
+        /// </summary>
+        /// <param name="logName">Path to the log file</param>
+        /// <param name="level">The trace level</param>
         public void Initialize(string logName, InternalTraceLevel level)
         {
-            if (!Initialized)
+            bool logFileChanging = _linesWritten > 0 && logName != LogPath;
+            if (logFileChanging)
             {
-                DefaultTraceLevel = level;
-
-                if (DefaultTraceLevel > InternalTraceLevel.Off)
-                    WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
-
-                Initialized = true;
+                WriteLine($"Log continues in file {logName}");
+                Close();
+                _linesWritten = 0;
             }
-            else
-                WriteLine($"InternalTrace: Ignoring attempted re-initialization at level {level}");
+
+            var oldPath = LogPath;
+            LogPath = logName;
+            DefaultTraceLevel = level;
+
+            if (DefaultTraceLevel > InternalTraceLevel.Off)
+            {
+                if (logFileChanging)
+                    WriteLine($"Log continued from {oldPath}");
+                WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
+            }
+            
+            Initialized = true;
         }
 
         /// <summary>
@@ -76,6 +104,8 @@ namespace TestCentric
             return new Logger(name, level, this, echo);
         }
 
+        private int _linesWritten = 0;
+
         /// <summary>
         /// Writes a string followed by a line terminator to the text string or stream.
         /// </summary>
@@ -87,12 +117,13 @@ namespace TestCentric
                 // We delay creation of the writer so that we can avoid creation of empty log files
                 if (_writer == null)
                 {
-                    var streamWriter = new StreamWriter(new FileStream(_logPath, FileMode.Append, FileAccess.Write, FileShare.Write));
+                    var streamWriter = new StreamWriter(new FileStream(LogPath, FileMode.Create, FileAccess.Write, FileShare.Write));
                     streamWriter.AutoFlush = true;
                     _writer = streamWriter;
                 }
 
                 _writer.WriteLine(value);
+                _linesWritten++;
             }
         }
 
