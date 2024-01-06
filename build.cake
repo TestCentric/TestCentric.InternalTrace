@@ -11,7 +11,8 @@ BuildSettings.Initialize(
 	context: Context,
 	title: "TestCentric Internal Trace",
 	solutionFile: "TestCentric.InternalTrace.sln",
-	githubRepository: "TestCentric.InternalTrace");
+	githubRepository: "TestCentric.InternalTrace",
+	unitTests: "**/*.Tests.exe");
 
 BuildSettings.Packages.Add(new NuGetPackage(
 	id: "TestCentric.InternalTrace",

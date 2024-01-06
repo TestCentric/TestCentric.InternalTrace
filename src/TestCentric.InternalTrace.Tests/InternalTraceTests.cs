@@ -32,7 +32,7 @@ namespace TestCentric
             // test may fail if a different runner is used.
             // TODO: Remove this limitation.
             Assert.False(InternalTrace.Initialized);
-            Assert.That(InternalTrace.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Default));
+            Assert.That(InternalTrace.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.NotSet));
             Assert.NotNull(InternalTrace.TraceWriter);
             Assert.That(InternalTrace.TraceWriter.LogPath, Is.EqualTo(DEFAULT_LOG_FILE));
         }
