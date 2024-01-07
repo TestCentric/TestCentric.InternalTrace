@@ -15,7 +15,7 @@ namespace TestCentric
         /// Use the default trace level as specified by the user.
         /// If not specified, defaults to 'Off'.
         /// </summary>
-        Default = 0,
+        NotSet = 0,
 
         /// <summary>
         /// Do not display any trace messages

@@ -3,6 +3,10 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
+// Uncomment to allow logging before initialization
+// Must be the same in InternalTraceWriter.cs
+//#define UNINITIALIZED_LOGGING_PERMITTED
+
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using System;
@@ -36,20 +40,41 @@ namespace TestCentric
         public void DefaultSettings()
         {
             Assert.False(_traceWriter.Initialized);
-            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Default));
+            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.NotSet));
+            Assert.That(_traceWriter.LogPath, Is.EqualTo(DEFAULT_LOG_FILE));
+        }
+
+        [TestCaseSource(nameof(LEVELS))]
+        [TestCase(InternalTraceLevel.Off)]
+        public void InitializeWithTraceLevel(InternalTraceLevel level)
+        {
+            _traceWriter.Initialize(level);
+
+            Assert.True(_traceWriter.Initialized);
+            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(level));
             Assert.That(_traceWriter.LogPath, Is.EqualTo(DEFAULT_LOG_FILE));
         }
 
         [Test]
-        public void Initialization()
+        public void InitializeWithLogFile()
         {
             const string LOG_FILE = "LogFile.log";
-            const InternalTraceLevel LEVEL = InternalTraceLevel.Info;
-
-            _traceWriter.Initialize(LOG_FILE, LEVEL);
+            _traceWriter.Initialize(LOG_FILE);
 
             Assert.True(_traceWriter.Initialized);
-            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(LEVEL));
+            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Off));
+            Assert.That(_traceWriter.LogPath, Is.EqualTo(LOG_FILE));
+        }
+
+        [TestCaseSource(nameof(LEVELS))]
+        [TestCase(InternalTraceLevel.Off)]
+        public void InitializeWithLogFileAndTraceLevel(InternalTraceLevel level)
+        {
+            const string LOG_FILE = "LogFile.log";
+            _traceWriter.Initialize(LOG_FILE, level);
+
+            Assert.True(_traceWriter.Initialized);
+            Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(level));
             Assert.That(_traceWriter.LogPath, Is.EqualTo(LOG_FILE));
         }
 
@@ -82,7 +107,7 @@ namespace TestCentric
             Assert.Multiple(() =>
             {
                 Assert.That(logger.Name, Is.EqualTo("MyLogger"));
-                Assert.That(logger.TraceLevel, Is.EqualTo(InternalTraceLevel.Default));
+                Assert.That(logger.TraceLevel, Is.EqualTo(InternalTraceLevel.NotSet));
                 Assert.That(logger.TraceWriter, Is.SameAs(_traceWriter));
                 Assert.False(logger.EchoToConsole);
             });
@@ -118,12 +143,9 @@ namespace TestCentric
         }
 
         [TestCaseSource(nameof(LEVELS))]
-        [TestCase(InternalTraceLevel.Default)]
-        public void LogWithoutIntializing(InternalTraceLevel expectedLevel)
+        public void LogWithoutIntializingWhen_LoggerSpecifiedLevel(InternalTraceLevel expectedLevel)
         {
-            var logger = expectedLevel != InternalTraceLevel.Default
-                ? _traceWriter.GetLogger("MyLogger", expectedLevel)
-                : _traceWriter.GetLogger("MyLogger");
+            var logger = _traceWriter.GetLogger("MyLogger", expectedLevel);
 
             switch (expectedLevel)
             {
@@ -139,10 +161,6 @@ namespace TestCentric
                 case InternalTraceLevel.Error:
                     logger.Error("My message");
                     break;
-                case InternalTraceLevel.Default:
-                    logger.Info("My message");
-                    expectedLevel = InternalTraceLevel.Info;
-                    break;
             }
 
             _traceWriter.Close();
@@ -153,56 +171,129 @@ namespace TestCentric
         }
 
         [Test]
-        public void LogBeforeAndAfterInitialization_SingleFile()
+        public void LogWithoutIntializing_NoLoggerSpecifiedLevel()
         {
-            var logger = _traceWriter.GetLogger("Mylogger");
+            var logger = _traceWriter.GetLogger("MyLogger");
+            logger.Error("This should not appear");
+            _traceWriter.Close();
 
-            logger.Debug("My debug message");
-            logger.Info("My first message");
+#if UNINITIALIZED_LOGGING_PERMITTED
+            CheckTraceOutput(DEFAULT_LOG_FILE, new[] {
+                "Warning.*MyLogger: Called Logger.Error before Initialize: This should not appear"
+            });
+#else
+            FileMustNotExist(DEFAULT_LOG_FILE);
+#endif
+        }
+
+        [TestCaseSource(nameof(LEVELS))]
+        public void LogBeforeAndAfterInitialization_SingleFile(InternalTraceLevel loggerLevel)
+        {
+            var logger = _traceWriter.GetLogger("MyLogger", loggerLevel);
+            var logger2 = _traceWriter.GetLogger("Logger2");  // level not set
+
+            logger.Debug("My first DEBUG message");
+            logger.Info("My first INFO message");
+            logger2.Info("This should not appear");
 
             _traceWriter.Initialize(InternalTraceLevel.Info);
 
-            logger.Debug("This should not appear");
-            logger.Info("My second message");
+            logger.Debug("My second DEBUG message");
+            logger.Info("My second INFO message");
+            logger2.Info("Displays after initialization");
 
             _traceWriter.Close();
 
-            CheckTraceOutput(DEFAULT_LOG_FILE, new[]
+            switch (loggerLevel)
             {
-                "My debug message",
-                "My first message",
-                "InternalTrace: Initializing at level Info",
-                "My second message"
-            });
+                case InternalTraceLevel.Debug:
+                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
+                    {
+                        "Debug.*MyLogger: My first DEBUG message",
+                        "Info.*MyLogger: My first INFO message",
+#if UNINITIALIZED_LOGGING_PERMITTED
+                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
+#endif
+                        "^InternalTrace: Initializing at level Info$",
+#if !UNINITIALIZED_LOGGING_PERMITTED
+                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
+#endif
+                        "Debug.*MyLogger: My second DEBUG message",
+                        "Info.*MyLogger: My second INFO message",
+                        "Info.*Logger2: Displays after initialization"
+                    });
+                    break;
+
+                case InternalTraceLevel.Info:
+                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
+                    {
+                        "Info.*MyLogger: My first INFO message",
+#if UNINITIALIZED_LOGGING_PERMITTED
+                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
+#endif
+                        "^InternalTrace: Initializing at level Info$",
+#if !UNINITIALIZED_LOGGING_PERMITTED
+                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
+#endif
+                        "Info.*MyLogger: My second INFO message",
+                        "Info.*Logger2: Displays after initialization"
+                    });
+                    break;
+
+                default:
+                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
+                    {
+#if UNINITIALIZED_LOGGING_PERMITTED
+                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
+#endif
+                        "^InternalTrace: Initializing at level Info$",
+#if !UNINITIALIZED_LOGGING_PERMITTED
+                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
+#endif
+                        "Info.*Logger2: Displays after initialization"
+                    });
+                    break;
+            }
         }
 
         [Test]
         public void LogBeforeAndAfterInitialization_TwoFiles()
         {
-            var logger = _traceWriter.GetLogger("Mylogger");
+            var logger = _traceWriter.GetLogger("MyLogger", InternalTraceLevel.Debug);
+            var logger2 = _traceWriter.GetLogger("Logger2");  // level not set
 
-            logger.Debug("My debug message");
-            logger.Info("My first message");
+            logger.Debug("My first DEBUG message");
+            logger.Info("My first INFO message");
+            logger2.Info("This should not appear");
 
             _traceWriter.Initialize("SecondLogFile.log", InternalTraceLevel.Info);
 
-            logger.Debug("This should not appear");
-            logger.Info("My second message");
+            logger.Debug("My second DEBUG message");
+            logger.Info("My second INFO message");
+            logger2.Info("Displays after initialization");
 
             _traceWriter.Close();
 
             CheckTraceOutput(DEFAULT_LOG_FILE, new[]
             {
-                "My debug message",
-                "My first message",
-                "Log continues in file SecondLogFile.log"
+                "Debug.*MyLogger: My first DEBUG message",
+                "Info.*MyLogger: My first INFO message",
+#if UNINITIALIZED_LOGGING_PERMITTED
+                "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
+#endif
+                "^Log continues in file SecondLogFile.log$"
             });
 
             CheckTraceOutput("SecondLogFile.log", new[]
             {
-                $"Log continued from {DEFAULT_LOG_FILE}",
-                "InternalTrace: Initializing at level Info",
-                "My second message"
+                $"^Log continued from {DEFAULT_LOG_FILE}$",
+                "^InternalTrace: Initializing at level Info$",
+#if !UNINITIALIZED_LOGGING_PERMITTED
+                "^InternalTrace: Skipped 1 log entry prior to initialization$",
+#endif
+                "Debug.*MyLogger: My second DEBUG message",
+                "Info.*MyLogger: My second INFO message",
+                "Info.*Logger2: Displays after initialization"
             });
         }
 
@@ -223,6 +314,18 @@ namespace TestCentric
 
                 Assert.That(lines.Length, Is.EqualTo(expected.Length));
             });
+        }
+
+        private void FileMustNotExist(string logFile)
+        {
+            if (File.Exists(logFile))
+            {
+                string[] lines = File.ReadAllLines(logFile);
+
+                Assert.Fail(
+                    $"Log file {logFile} should not have been created but was...\r\n" +
+                    $"  ->{string.Join("\r\n  ->", lines)}");
+            }
         }
     }
 }

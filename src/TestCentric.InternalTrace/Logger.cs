@@ -3,9 +3,6 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
-using System;
-using System.IO;
-
 namespace TestCentric
 {
     /// <summary>
@@ -13,11 +10,6 @@ namespace TestCentric
     /// </summary>
     public class Logger
     {
-        private const string INVALID_OPERATION_MSG = "Cannot use Logger before InternalTrace is initialized.";
-
-        private const string TIME_FORMAT = "HH:mm:ss.fff";
-        private const string TRACE_FORMAT = "{0} {1,-5} [{2,2}] {3}: {4}";
-
         public  string Name { get; }
         public bool EchoToConsole { get; }
 
@@ -118,44 +110,22 @@ namespace TestCentric
             Log(InternalTraceLevel.Verbose, format, args);
         }
 
-        private void Log(InternalTraceLevel level, string message)
-        {
-            if (!TraceWriter.Initialized)
-                WriteLog(level, message);
-            else
-            {
-                if (TraceLevel == InternalTraceLevel.Default)
-                    TraceLevel = TraceWriter.DefaultTraceLevel;
-
-                if (TraceLevel >= level)
-                    WriteLog(level, message);
-            }
-        }
-
         private void Log(InternalTraceLevel level, string format, params object[] args)
         {
             string message = string.Format(format, args);
             Log(level, message);
         }
 
-        private void WriteLog(InternalTraceLevel level, string message)
+        private void Log(InternalTraceLevel level, string message)
         {
-#if NET20 || NET30 || NET35 || NET40
-            int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-#else
-            int threadId = Environment.CurrentManagedThreadId;
-#endif
-            string formattedMessage = string.Format(TRACE_FORMAT,
-                DateTime.Now.ToString(TIME_FORMAT),
-                level,
-                threadId,
-                Name,
-                message);
+            // Logger without a specified TraceLevel uses the TraceWriter's
+            // TraceLevel, which is set at the time of initialization. 
+            // Since it's possible that the Logger was created before initialization,
+            // we set it once again here.
+            if (TraceLevel == InternalTraceLevel.NotSet)
+                TraceLevel = TraceWriter.DefaultTraceLevel;
 
-            TraceWriter.WriteLine(formattedMessage);
-
-            if (EchoToConsole)
-                Console.WriteLine(formattedMessage);
+            TraceWriter.WriteLogEntry(this, level, message);
         }
     }
 }

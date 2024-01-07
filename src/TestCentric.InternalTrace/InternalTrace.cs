@@ -52,13 +52,23 @@ namespace TestCentric
             => TraceWriter.Initialize(logName, level);
 
         /// <summary>
+        /// Initialize the trace specifying only the trace level.
+        /// </summary>
+        /// <param name="level">The trace level</param>
+        /// <remarks>
+        /// The default log destination, InternalTrace_PROCESSID will be used.
+        /// </remarks>
+        public static void Initialize(InternalTraceLevel level)
+            => TraceWriter.Initialize(level);
+
+        /// <summary>
         /// Get a Logger specifying the logger name and optionally the  trace level and echo flag
         /// </summary>
         /// <returns>A logger</returns>
         /// <param name="name">Name to use for the logger</param>
         /// <param name="level">Optional trace level for this logger</param>
         /// <param name="echo">If true, logger output is echoed to the console</param>
-        public static Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
+        public static Logger GetLogger(string name, InternalTraceLevel level = InternalTraceLevel.NotSet, bool echo = false)
             => TraceWriter.GetLogger(name, level, echo);
 
         /// <summary>
@@ -68,7 +78,7 @@ namespace TestCentric
         /// <param name="type">Type whose name is used for for the logger</param>
         /// <param name="level">Optional trace level for this logger</param>
         /// <param name="echo">If true, logger output is echoed to the console</param>
-        public static Logger GetLogger(Type type, InternalTraceLevel level = InternalTraceLevel.Default, bool echo = false)
+        public static Logger GetLogger(Type type, InternalTraceLevel level = InternalTraceLevel.NotSet, bool echo = false)
             => TraceWriter.GetLogger(type.FullName, level, echo);
     }
 }
