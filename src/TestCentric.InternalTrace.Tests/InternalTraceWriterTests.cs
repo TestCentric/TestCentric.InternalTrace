@@ -3,13 +3,10 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
-// Uncomment to allow logging before initialization
-// Must be the same in InternalTraceWriter.cs
-//#define UNINITIALIZED_LOGGING_PERMITTED
-
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -165,25 +162,37 @@ namespace TestCentric
 
             _traceWriter.Close();
 
-            CheckTraceOutput(DEFAULT_LOG_FILE, new[] {
-                $"{expectedLevel}.*MyLogger: My message"
-            });
+            CheckTraceOutput(DEFAULT_LOG_FILE,
+                "^InternalTrace: Initializing automatically at level Debug$",
+                $"{expectedLevel}.*MyLogger: My message");
         }
 
-        [Test]
-        public void LogWithoutIntializing_NoLoggerSpecifiedLevel()
+        [TestCaseSource(nameof(LEVELS))]
+        public void LogWithoutIntializing_NoLoggerSpecifiedLevel(InternalTraceLevel expectedLevel)
         {
             var logger = _traceWriter.GetLogger("MyLogger");
-            logger.Error("This should not appear");
+
+            switch (expectedLevel)
+            {
+                case InternalTraceLevel.Debug:
+                    logger.Debug("My message");
+                    break;
+                case InternalTraceLevel.Warning:
+                    logger.Warning("My message");
+                    break;
+                case InternalTraceLevel.Info:
+                    logger.Info("My message");
+                    break;
+                case InternalTraceLevel.Error:
+                    logger.Error("My message");
+                    break;
+            }
+
             _traceWriter.Close();
 
-#if UNINITIALIZED_LOGGING_PERMITTED
-            CheckTraceOutput(DEFAULT_LOG_FILE, new[] {
-                "Warning.*MyLogger: Called Logger.Error before Initialize: This should not appear"
-            });
-#else
-            FileMustNotExist(DEFAULT_LOG_FILE);
-#endif
+            CheckTraceOutput(DEFAULT_LOG_FILE,
+                "^InternalTrace: Initializing automatically at level Debug$",
+                $"{expectedLevel}.*MyLogger: My message");
         }
 
         [TestCaseSource(nameof(LEVELS))]
@@ -194,7 +203,7 @@ namespace TestCentric
 
             logger.Debug("My first DEBUG message");
             logger.Info("My first INFO message");
-            logger2.Info("This should not appear");
+            logger2.Info("Displays before initialization");
 
             _traceWriter.Initialize(InternalTraceLevel.Info);
 
@@ -207,51 +216,31 @@ namespace TestCentric
             switch (loggerLevel)
             {
                 case InternalTraceLevel.Debug:
-                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
-                    {
+                    CheckTraceOutput(DEFAULT_LOG_FILE,
+                        "^InternalTrace: Initializing automatically at level Debug$",
                         "Debug.*MyLogger: My first DEBUG message",
                         "Info.*MyLogger: My first INFO message",
-#if UNINITIALIZED_LOGGING_PERMITTED
-                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
-#endif
+                        "Info.*Logger2: Displays before initialization",
                         "^InternalTrace: Initializing at level Info$",
-#if !UNINITIALIZED_LOGGING_PERMITTED
-                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
-#endif
                         "Debug.*MyLogger: My second DEBUG message",
                         "Info.*MyLogger: My second INFO message",
-                        "Info.*Logger2: Displays after initialization"
-                    });
+                        "Info.*Logger2: Displays after initialization");
                     break;
-
                 case InternalTraceLevel.Info:
-                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
-                    {
+                    CheckTraceOutput(DEFAULT_LOG_FILE,
+                        "^InternalTrace: Initializing automatically at level Debug$",
                         "Info.*MyLogger: My first INFO message",
-#if UNINITIALIZED_LOGGING_PERMITTED
-                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
-#endif
+                        "Info.*Logger2: Displays before initialization",
                         "^InternalTrace: Initializing at level Info$",
-#if !UNINITIALIZED_LOGGING_PERMITTED
-                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
-#endif
                         "Info.*MyLogger: My second INFO message",
-                        "Info.*Logger2: Displays after initialization"
-                    });
+                        "Info.*Logger2: Displays after initialization");
                     break;
-
                 default:
-                    CheckTraceOutput(DEFAULT_LOG_FILE, new[]
-                    {
-#if UNINITIALIZED_LOGGING_PERMITTED
-                        "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
-#endif
+                    CheckTraceOutput(DEFAULT_LOG_FILE,
+                        "^InternalTrace: Initializing automatically at level Debug$",
+                        "Info.*Logger2: Displays before initialization",
                         "^InternalTrace: Initializing at level Info$",
-#if !UNINITIALIZED_LOGGING_PERMITTED
-                        "^InternalTrace: Skipped 1 log entry prior to initialization$",
-#endif
-                        "Info.*Logger2: Displays after initialization"
-                    });
+                        "Info.*Logger2: Displays after initialization");
                     break;
             }
         }
@@ -264,7 +253,7 @@ namespace TestCentric
 
             logger.Debug("My first DEBUG message");
             logger.Info("My first INFO message");
-            logger2.Info("This should not appear");
+            logger2.Info("Displays before initialization");
 
             _traceWriter.Initialize("SecondLogFile.log", InternalTraceLevel.Info);
 
@@ -274,27 +263,19 @@ namespace TestCentric
 
             _traceWriter.Close();
 
-            CheckTraceOutput(DEFAULT_LOG_FILE, new[]
-            {
+            CheckTraceOutput(DEFAULT_LOG_FILE,
+                "^InternalTrace: Initializing automatically at level Debug$",
                 "Debug.*MyLogger: My first DEBUG message",
                 "Info.*MyLogger: My first INFO message",
-#if UNINITIALIZED_LOGGING_PERMITTED
-                "Warning.*Logger2: Called Logger.Info before Initialize: This should not appear",
-#endif
-                "^Log continues in file SecondLogFile.log$"
-            });
+                "Info.*Logger2: Displays before initialization",
+                "^Log continues in file SecondLogFile.log$");
 
-            CheckTraceOutput("SecondLogFile.log", new[]
-            {
+            CheckTraceOutput("SecondLogFile.log",
                 $"^Log continued from {DEFAULT_LOG_FILE}$",
                 "^InternalTrace: Initializing at level Info$",
-#if !UNINITIALIZED_LOGGING_PERMITTED
-                "^InternalTrace: Skipped 1 log entry prior to initialization$",
-#endif
                 "Debug.*MyLogger: My second DEBUG message",
                 "Info.*MyLogger: My second INFO message",
-                "Info.*Logger2: Displays after initialization"
-            });
+                "Info.*Logger2: Displays after initialization");
         }
 
         private void CheckTraceOutput(string logFile, params string[] expected)
