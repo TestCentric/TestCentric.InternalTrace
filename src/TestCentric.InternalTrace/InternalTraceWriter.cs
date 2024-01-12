@@ -3,10 +3,6 @@
 // Licensed under the MIT License. See LICENSE file in root directory.
 // ***********************************************************************
 
-// Uncomment to allow logging before initialization
-// Must be the same in InternalTraceWriterTests.cs
-//#define UNINITIALIZED_LOGGING_PERMITTED
-
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -21,14 +17,13 @@ namespace TestCentric
     {
         private const string TIME_FORMAT = "HH:mm:ss.fff";
         private const string TRACE_FORMAT = "{0} {1,-5} [{2,2}] {3}: {4}";
+        static readonly int PROCESS_ID = Process.GetCurrentProcess().Id;
 
         TextWriter _writer;
         object _myLock = new object();
 
-        // Number of writes to current file
+        // Number of writes to current log file
         int _linesWritten = 0;
-        // Number of log calls ignored prior to initialization
-        int _uninitializedLogCount = 0;
 
         /// <summary>
         /// Gets a flag indicating whether the InternalTraceWriter is initialized
@@ -51,6 +46,8 @@ namespace TestCentric
             LogPath = logPath;
         }
 
+        #region Construction and Initialization
+
         /// <summary>
         /// Construct an InternalTraceWriter that writes to a 
         /// TextWriter provided by the caller.
@@ -59,17 +56,6 @@ namespace TestCentric
         public InternalTraceWriter(TextWriter writer)
         {
             _writer = writer;
-        }
-
-        /// <summary>
-        /// Initialize the trace specifying only the trace traceLevel.
-        /// </summary>
-        /// <param name="level">The trace traceLevel</param>
-        public void Initialize(InternalTraceLevel level)
-        {
-            var pid = Process.GetCurrentProcess().Id;
-            var logName = $"InternalTrace_{pid}";
-            Initialize(logName, level);
         }
 
         /// <summary>
@@ -91,24 +77,82 @@ namespace TestCentric
             var oldPath = LogPath;
             LogPath = logName;
             DefaultTraceLevel = level;
+            Initialized = true;
 
             if (DefaultTraceLevel > InternalTraceLevel.Off)
             {
                 if (logFileChanging)
                     WriteLine($"Log continued from {oldPath}");
                 WriteLine($"InternalTrace: Initializing at level {DefaultTraceLevel}");
+            }
+        }
 
-                if (_uninitializedLogCount > 0)
+        /// <summary>
+        /// Initialize the trace specifying only the trace traceLevel.
+        /// </summary>
+        /// <param name="level">The trace traceLevel</param>
+        public void Initialize(InternalTraceLevel level)
+        {
+            // TODO: Should we take this from the environment variable?
+            var logName = $"InternalTrace_{PROCESS_ID}";
+            Initialize(logName, level);
+        }
+
+        /// <summary>
+        /// Initialize the trace automatically, using environment variables and defaults.
+        /// </summary>
+        /// <param name="level">The trace traceLevel</param>
+        public void Initialize()
+        {
+            var logName = GetDefaultLogFilePath();
+            var traceLevel = GetDefaultTraceLevel();
+            if (traceLevel == InternalTraceLevel.NotSet)
+                traceLevel = InternalTraceLevel.Debug;
+
+            LogPath = logName;
+            DefaultTraceLevel = traceLevel;
+            Initialized = true;
+
+            if (DefaultTraceLevel > InternalTraceLevel.Off)
+                WriteLine($"InternalTrace: Initializing automatically at level {DefaultTraceLevel}");
+        }
+
+        private string GetDefaultLogFilePath()
+        {
+            var logSetting = Environment.GetEnvironmentVariable("TESTCENTRIC_INTERNAL_TRACE_LOG_FILE");
+
+            if (logSetting == null)
+                return $"InternalTrace_{PROCESS_ID}";
+
+            return logSetting.Replace("{PID}", PROCESS_ID.ToString());
+        }
+
+        private InternalTraceLevel GetDefaultTraceLevel()
+        {
+            var traceSetting = Environment.GetEnvironmentVariable("TESTCENTRIC_INTERNAL_TRACE_LEVEL");
+            InternalTraceLevel traceLevel = InternalTraceLevel.NotSet; // This is used as the default
+
+            if (!string.IsNullOrEmpty(traceSetting))
+            {
+#if NET20
+                try
                 {
-                    _writer.WriteLine(_uninitializedLogCount == 1
-                        ? $"InternalTrace: Skipped 1 log entry prior to initialization"
-                        : $"InternalTrace: Skipped {_uninitializedLogCount} log entries prior to initialization");
-                    _uninitializedLogCount = 0;
+                    traceLevel = (InternalTraceLevel)Enum.Parse(typeof(InternalTraceLevel), traceSetting, true);
                 }
+                catch(Exception ex) 
+                {
+                    throw new Exception($"Environment variable TESTCENTRIC_INTERNAL_TRACE has invalid value {traceSetting}", ex);
+                }
+#else
+                if (!Enum.TryParse<InternalTraceLevel>(traceSetting, true, out traceLevel))
+                    throw new Exception($"Environment variable TESTCENTRIC_INTERNAL_TRACE has invalid value {traceSetting}");
+#endif
             }
 
-            Initialized = true;
+            return traceLevel;
         }
+
+        #endregion
 
         /// <summary>
         /// Get a Logger specifying the logger name and optionally the  trace traceLevel and echo flag
@@ -147,19 +191,8 @@ namespace TestCentric
 
         public void WriteLogEntry(Logger logger, InternalTraceLevel level, string message)
         {
-            if (logger.TraceLevel >= level)
+            if (logger.TraceLevel >= level || logger.TraceLevel == InternalTraceLevel.NotSet)
                 WriteLog(logger.Name, level, message);
-            else if (logger.TraceLevel == InternalTraceLevel.NotSet)
-            {
-                // This means the trace writer itself was never initialized
-#if UNINITIALIZED_LOGGING_PERMITTED
-                message = $"Called Logger.{level} before Initialize: {message}";
-                level = InternalTraceLevel.Warning;
-                WriteLog(logger.Name, level, message);
-#else
-                _uninitializedLogCount++;
-#endif
-            }
         }
 
         /// <summary>
@@ -170,40 +203,16 @@ namespace TestCentric
         {
             lock (_myLock)
             {
+                // We are about to write, if needed do just-in-time self-initialization
+                if (!Initialized)
+                    Initialize();
+
                 // We delay creation of the StreamWriter so that we can avoid creation of empty log files
                 if (_writer == null)
-                {
-                    var streamWriter = new StreamWriter(new FileStream(LogPath, FileMode.Create, FileAccess.Write, FileShare.Write));
-                    streamWriter.AutoFlush = true;
-                    _writer = streamWriter;
-
-                    if (!Initialized)
+                    _writer = new StreamWriter(new FileStream(LogPath, FileMode.Create, FileAccess.Write, FileShare.Write))
                     {
-                        var traceSetting = Environment.GetEnvironmentVariable("TESTCENTRIC_INTERNAL_TRACE");
-
-                        if (!string.IsNullOrEmpty(traceSetting))
-                        {
-                            InternalTraceLevel traceLevel;
-#if NET20
-                            try
-                            {
-                                traceLevel = (InternalTraceLevel)Enum.Parse(typeof(InternalTraceLevel), traceSetting, true);
-                            }
-                            catch(Exception ex) 
-                            {
-                                throw new Exception($"Environment variable TESTCENTRIC_INTERNAL_TRACE has invalid value {traceSetting}", ex);
-                            }
-
-                            Initialize(traceLevel);
-#else
-                            if (Enum.TryParse<InternalTraceLevel>(traceSetting, true, out traceLevel))
-                                Initialize(traceLevel);
-                            else
-                                throw new Exception($"Environment variable TESTCENTRIC_INTERNAL_TRACE has invalid value {traceSetting}");
-#endif
-                        }
-                    }
-                }
+                        AutoFlush = true
+                    };
 
                 _writer.WriteLine(value);
                 _linesWritten++;
