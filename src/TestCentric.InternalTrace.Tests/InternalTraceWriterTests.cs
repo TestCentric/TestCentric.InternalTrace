@@ -15,14 +15,14 @@ namespace TestCentric
     public class InternalTraceWriterTests
     {
         static readonly InternalTraceLevel[] LEVELS = new[] { InternalTraceLevel.Error, InternalTraceLevel.Warning, InternalTraceLevel.Info, InternalTraceLevel.Debug };
-        static readonly string DEFAULT_LOG_FILE = "InternalTrace_" + Process.GetCurrentProcess().Id;
+        static readonly string DEFAULT_LOG_FILE = $"InternalTrace_{Process.GetCurrentProcess().Id}.log";
 
         InternalTraceWriter _traceWriter;
 
         [SetUp]
         public void CreateTraceWriter()
         {
-            _traceWriter = new InternalTraceWriter(DEFAULT_LOG_FILE);
+            _traceWriter = new InternalTraceWriter();
         }
 
         [TearDown]

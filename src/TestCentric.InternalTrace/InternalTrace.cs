@@ -29,8 +29,7 @@ namespace TestCentric
         /// The TraceWriter used for logging is created here as a singleton. All
         /// other operations are delegated to the TraceWriter.
         /// </summary>
-        public static InternalTraceWriter TraceWriter { get; }
-            = new InternalTraceWriter($"InternalTrace_{Process.GetCurrentProcess().Id}");
+        public static InternalTraceWriter TraceWriter { get; } = new InternalTraceWriter();
 
         /// <summary>
         /// Gets a flag indicating whether Initialize has been called
