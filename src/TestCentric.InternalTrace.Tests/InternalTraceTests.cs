@@ -22,7 +22,7 @@ namespace TestCentric
         // in the InternalTestWriter class, where they are tested.
 
         static readonly InternalTraceLevel[] LEVELS = new[] { InternalTraceLevel.Error, InternalTraceLevel.Warning, InternalTraceLevel.Info, InternalTraceLevel.Debug };
-        static readonly string DEFAULT_LOG_FILE = "InternalTrace_" + Process.GetCurrentProcess().Id;
+        static readonly string DEFAULT_LOG_FILE = $"InternalTrace_{Process.GetCurrentProcess().Id}.log";
 
         [Test]
         public void DefaultSettings()
