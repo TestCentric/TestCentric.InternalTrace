@@ -24,7 +24,7 @@
 		<PackageIcon>testcentric.png</PackageIcon>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<PackageOutputPath>..\..\packaging</PackageOutputPath>
+		<PackageOutputPath>..\..\package</PackageOutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>
