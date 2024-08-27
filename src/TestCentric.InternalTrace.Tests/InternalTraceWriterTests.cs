@@ -75,26 +75,55 @@ namespace TestCentric
             Assert.That(_traceWriter.LogPath, Is.EqualTo(LOG_FILE));
         }
 
-        [Test]
-        public void InitializeMoreThanOnce()
+        [TestCase("LogFile1.log", InternalTraceLevel.Info, "LogFile1.log", InternalTraceLevel.Info, TestName = "{m}_SamePathAndLevel")]
+        [TestCase("LogFile1.log", InternalTraceLevel.Info, "LogFile2.log", InternalTraceLevel.Info, TestName = "{m}_DifferentPathSameLevel")]
+        [TestCase("LogFile1.log", InternalTraceLevel.Info, "LogFile1.log", InternalTraceLevel.Debug, TestName = "{m}_SamePathDifferentLevel")]
+        [TestCase("LogFile1.log", InternalTraceLevel.Info, "LogFile2.log", InternalTraceLevel.Debug, TestName = "{m}_DifferentPathAndLevel")]
+        public void InitializeMoreThanOnce(string logFile1, InternalTraceLevel level1, string logFile2, InternalTraceLevel level2)
         {
-            _traceWriter.Initialize("LogFile1.log", InternalTraceLevel.Info);
+            _traceWriter.Initialize(logFile1, level1);
 
             Assert.Multiple(() =>
             {
                 Assert.True(_traceWriter.Initialized);
-                Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Info));
-                Assert.That(_traceWriter.LogPath, Is.EqualTo("LogFile1.log"));
+                Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(level1));
+                Assert.That(_traceWriter.LogPath, Is.EqualTo(logFile1));
             });
 
-            _traceWriter.Initialize("LogFile2.log", InternalTraceLevel.Debug);
+            _traceWriter.WriteLog("InternalTrace", level1, "First message");
+
+            _traceWriter.Initialize(logFile2, level2);
 
             Assert.Multiple(() =>
             {
                 Assert.True(_traceWriter.Initialized);
-                Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(InternalTraceLevel.Debug));
-                Assert.That(_traceWriter.LogPath, Is.EqualTo("LogFile2.log"));
+                Assert.That(_traceWriter.DefaultTraceLevel, Is.EqualTo(level2));
+                Assert.That(_traceWriter.LogPath, Is.EqualTo(logFile2));
             });
+
+            _traceWriter.WriteLog("InternalTrace", level2, "Second message");
+            _traceWriter.Close();
+            
+            if (logFile1 == logFile2)
+            {
+                CheckTraceOutput(logFile1,
+                    $"InternalTrace: Initializing at level {level1}",
+                    "First message",
+                    $"InternalTrace: Initializing at level {level2}",
+                    "Second message");
+            }
+            else
+            {
+                CheckTraceOutput(logFile1,
+                    $"InternalTrace: Initializing at level {level1}",
+                    "First message",
+                    $"Log continues in file {logFile2}");
+                CheckTraceOutput(logFile2,
+                    $"Log continued from {logFile1}",
+                    $"InternalTrace: Initializing at level {level2}",
+                    "Second message");
+            }
+
         }
 
         [Test]
