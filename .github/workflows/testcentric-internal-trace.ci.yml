@@ -32,12 +32,7 @@ jobs:
       - name: 🔧 Install dotnet tools
         run: dotnet tool restore
 
-      - name: 🍰 Run cake
-        env:
-            TESTCENTRIC_MYGET_API_KEY: ${{ secrets.TESTCENTRIC_MYGET_API_KEY }}
-            TESTCENTRIC_NUGET_API_KEY: ${{ secrets.TESTCENTRIC_NUGET_API_KEY }}
-            TESTCENTRIC_CHOCO_API_KEY: ${{ secrets.TESTCENTRIC_CHOCO_API_KEY }}
-            GITHUB_ACCESS_TOKEN: ${{ secrets.TESTCENTRIC_GITHUB_ACCESS_TOKEN }}
+      - name: 🍰 Continuous Integration
 
         # If you need to get more verbose logging, add the following to the dotnet-cake above:  --verbosity=diagnostic
         run: dotnet cake --target=ContinuousIntegration --configuration=Release
