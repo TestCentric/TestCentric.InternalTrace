@@ -22,6 +22,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCentric.InternalTrace.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCentric.InternalTrace", "src\TestCentric.InternalTrace\TestCentric.InternalTrace.csproj", "{CCDDDBFF-E8C8-45B6-9261-BF59564AD638}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{2F9E8A83-4492-4372-86D5-B8EDF89A7996}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\testcentric-internal-trace.ci.yml = .github\workflows\testcentric-internal-trace.ci.yml
+		.github\workflows\testcentric-ci.yml = .github\workflows\testcentric-ci.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{545E402D-D8F6-4BB3-8056-C438C996F694}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +47,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2F9E8A83-4492-4372-86D5-B8EDF89A7996} = {545E402D-D8F6-4BB3-8056-C438C996F694}
+		{545E402D-D8F6-4BB3-8056-C438C996F694} = {EF67D721-9373-44AC-96DA-36EEDE3D6C93}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7BCCC10E-D87B-4D6F-B514-D40556B2C736}
