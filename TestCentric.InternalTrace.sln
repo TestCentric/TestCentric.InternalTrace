@@ -25,7 +25,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{2F9E8A83-4492-4372-86D5-B8EDF89A7996}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\testcentric-internal-trace.ci.yml = .github\workflows\testcentric-internal-trace.ci.yml
-		.github\workflows\testcentric-ci.yml = .github\workflows\testcentric-ci.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{545E402D-D8F6-4BB3-8056-C438C996F694}"
